@@ -9,6 +9,7 @@ type LoginRequest struct {
 
 type UserResponse struct {
 	UUID uuid.UUID `json:"uuid"`
+	Username string `json:"username"`
 	Name string `json:"name"`
 	Email string `json:"email"`
 	Role string `json:"role"`
