@@ -87,33 +87,47 @@ func validateAPIKey(c *gin.Context) error{
 }
 
 func validateBearerToken(c *gin.Context, token string)error{
+	//Cek apakah token mengandung "Bearer" dibagian awal
+	//Biasany token memiliki format "Bearer <token>"
 	if !strings.Contains(token, "Bearer"){
+		//jika tidak, kembalikan error Unauthorized
 		return errConstants.ErrUnauthorized
 	}
 
+	//extrak token (mengambil bagian setelah "Bearer")
 	tokenString := extractBearerToken(token)
+	// Jika token kosong, kembalikan error Unauthorized
 	if tokenString == ""{
 		return errConstants.ErrUnauthorized
 	}
 
+	// Membuat objek claim untuk menyimpan data yang didekodekan JWT
 	claims := &utils.Claims{}
+	
+	//Parsing JWT dengan claims yang sudah disiapkan
 	tokenJwt, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+		// Verifikasi metode signing JWT. 
+		// Hanya menerima metode HMAC (untuk token yang dienkripsi dengan secret key).
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok{
+			// Jika metode signing tidak cocok, kembalikan error InvalidToken
 			return nil, errConstants.ErrInvalidToken
 		}
 		
-
+		// Ambil secret key dari konfigurasi untuk memverifikasi JWT
 		jwtSecret := []byte(config.Config.JwtSecretKey)
 		return jwtSecret, nil
 	})
+	// Jika parsing token gagal atau token tidak valid, kembalikan error Unauthorized
 	if err != nil || !tokenJwt.Valid{
 		return errConstants.ErrUnauthorized
 	}
 
-	userLogin := c.Request.WithContext(context.WithValue(c.Request.Context(), constants.UserLogin, claims.User))
-	c.Request = userLogin
-	c.Set(constants.Token, token)
-
+	// Jika token valid, simpan data user dari claims ke dalam context request
+	// Menggunakan context.WithValue untuk menyimpan data user pada request
+	userLogin := context.WithValue(c.Request.Context(), constants.UserLogin, claims.User)
+	c.Request = c.Request.WithContext(userLogin)
+	
+	// Jika berhasil, return nil yang berarti token valid
 	return nil
 }
 
@@ -121,7 +135,7 @@ func Authenticate() gin.HandlerFunc{
 	return func(c *gin.Context) {
 		var err error
 		token:=c.GetHeader(constants.Authorization)
-		if err != nil{
+		if token == ""{
 			responseUnathorized(c, errConstants.ErrUnauthorized.Error())
 			return
 		}
