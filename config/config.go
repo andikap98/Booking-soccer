@@ -33,7 +33,7 @@ type Database struct {
 	MaxIdleTime           int    `json:"maxIdleTime"`
 }
 
-func init() {
+func Init() {
 	err := util.BindFormJSON(&Config, "config.json", ".")
 	if err != nil{
 		logrus.Errorf("failed to bind config: %v", err)
